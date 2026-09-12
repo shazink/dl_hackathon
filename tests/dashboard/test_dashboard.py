@@ -6,8 +6,6 @@ import sys
 import numpy as np
 import pandas as pd
 import pytest
-import joblib
-import torch
 
 from dashboard.data import (
     MAX_UPLOAD_BYTES,
@@ -19,8 +17,11 @@ from dashboard.data import (
     validate_upload,
 )
 from tafr_ids.data.inspection import CATEGORICAL, FEATURES
-from tafr_ids.data.preprocessing import FrozenPreprocessor
-from tafr_ids.models.mlp import TabularMLP
+from tafr_ids.inference.bundle import load_model_bundle, load_preprocessor, verify_asset_manifest
+
+
+REPOSITORY = Path(__file__).resolve().parents[2]
+MODELS = REPOSITORY / "models"
 
 
 def valid_frame():
@@ -79,16 +80,9 @@ def test_upload_rejects_unexpected_missing_nonfinite_malformed_and_limits():
         validate_upload(csv_bytes(oversized))
 
 
-def test_local_prediction_probabilities_are_finite(tmp_path):
+def test_local_prediction_probabilities_are_finite():
     frame = validate_upload(csv_bytes(valid_frame()))
-    processor = FrozenPreprocessor().fit_e1(frame, partition="development", experience=1)
-    transformed = processor.transform(frame)
-    model = TabularMLP(transformed.shape[1], 10, [8, 4], 0.0)
-    processor_path = tmp_path / "processor.joblib"
-    checkpoint_path = tmp_path / "checkpoint.pt"
-    joblib.dump(processor, processor_path)
-    torch.save({"config": {"model": {"hidden_dims": [8, 4], "dropout": 0.0}}, "model": model.state_dict()}, checkpoint_path)
-    prediction = predict_upload(frame, checkpoint_path, processor_path)
+    prediction = predict_upload(frame, MODELS / "tafr", MODELS / "shared" / "preprocessor.skops")
     probability_columns = [name for name in prediction if name.startswith("p_")]
     assert np.isfinite(prediction[["confidence", *probability_columns]].to_numpy()).all()
     assert prediction[probability_columns].sum(axis=1).iloc[0] == pytest.approx(1.0)
@@ -108,11 +102,18 @@ def test_simulation_scenarios_and_transformed_prediction(tmp_path):
     )
     scenarios = load_simulation_scenarios(scenario_path)
     assert scenarios is not None and scenarios["X"].shape == (2, 156)
-    model = TabularMLP(156, 10, [8, 4], 0.0)
-    checkpoint = tmp_path / "checkpoint.pt"
-    torch.save({"config": {"model": {"hidden_dims": [8, 4], "dropout": 0.0}}, "model": model.state_dict()}, checkpoint)
-    prediction = predict_features(scenarios["X"], checkpoint)
+    prediction = predict_features(scenarios["X"], MODELS / "naive")
     assert len(prediction) == 2
+
+
+def test_tracked_inference_bundles_are_complete():
+    assert len(verify_asset_manifest(MODELS)) == 14
+    processor = load_preprocessor(MODELS / "shared" / "preprocessor.skops")
+    assert processor.fit_rows_ == 44210 and len(processor.feature_names_) == 156
+    for method in ("naive", "uniform", "tafr_f", "tafr_fu", "tafr"):
+        model, metadata = load_model_bundle(MODELS / method)
+        assert model.parameter_count == 75146
+        assert metadata["method_id"] == method and metadata["seed"] == 42
 
 
 def test_simulation_scenarios_reject_corruption(tmp_path):

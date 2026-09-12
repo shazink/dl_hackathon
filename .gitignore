@@ -59,3 +59,5 @@ screenshots/
 *.onnx
 wandb/
 mlruns/
+
+# Final inference-only exports under models/ are intentionally tracked.

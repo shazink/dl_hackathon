@@ -45,3 +45,5 @@ Completed for development/validation preparation: fit once on E1 development and
 ## 10. Reproducibility audit, report, and demo
 
 **Acceptance:** a clean one-command run is documented and verified; artifacts link to fingerprints and configuration; claims match executed results; the final report stays within four pages; the demo is reproducible.
+
+Completed: tracked result summaries power the charts, and minimal checksum-verified inference bundles power raw CSV inference and the development-only simulator without retraining or local ignored artifacts. The pre-change clone audit is recorded in `docs/clone_usability_audit.md`.

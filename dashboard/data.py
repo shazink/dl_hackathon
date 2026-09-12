@@ -6,14 +6,13 @@ import io
 import json
 from pathlib import Path
 
-import joblib
 import numpy as np
 import pandas as pd
 import torch
 
 from tafr_ids.data.inspection import CATEGORICAL, FEATURES, TARGETS
 from tafr_ids.data.loader import CLASSES
-from tafr_ids.models.mlp import TabularMLP
+from tafr_ids.inference.bundle import load_preprocessor, predict_probabilities, verify_asset_manifest
 
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024
 MAX_UPLOAD_ROWS = 500
@@ -42,6 +41,8 @@ def load_simulation_scenarios(path: str | Path) -> dict | None:
     source = Path(path)
     if not source.is_file():
         return None
+    if source.parent.name == "shared" and (source.parent / "SHA256SUMS").is_file():
+        verify_asset_manifest(source.parent.parent)
     try:
         with np.load(source, allow_pickle=False) as archive:
             required = {"schema_version", "X", "y", "source_indices", "experiences", "class_names"}
@@ -96,26 +97,9 @@ def validate_upload(content: bytes) -> pd.DataFrame:
     return result
 
 
-def _load_model(features: np.ndarray, checkpoint: str | Path) -> TabularMLP:
-    if features.dtype != np.float32 or not np.isfinite(features).all():
-        raise ValueError("Model input must be finite float32 features")
-    try:
-        state = torch.load(Path(checkpoint), map_location="cpu", weights_only=False)
-        model_config = state["config"]["model"]
-        model = TabularMLP(features.shape[1], len(CLASSES), model_config["hidden_dims"], model_config["dropout"])
-        model.load_state_dict(state["model"])
-    except (OSError, KeyError, TypeError, RuntimeError, ValueError) as error:
-        raise ValueError(f"Checkpoint is unavailable or incompatible: {error}") from error
-    model.eval()
-    return model
-
-
 @torch.inference_mode()
-def predict_features(features: np.ndarray, checkpoint: str | Path) -> pd.DataFrame:
-    model = _load_model(features, checkpoint)
-    probabilities = torch.softmax(model(torch.from_numpy(features)), dim=1).numpy()
-    if not np.isfinite(probabilities).all():
-        raise ValueError("Model produced non-finite probabilities")
+def predict_features(features: np.ndarray, bundle_dir: str | Path) -> pd.DataFrame:
+    probabilities = predict_probabilities(features, bundle_dir)
     predictions = probabilities.argmax(axis=1)
     output = pd.DataFrame({"predicted_class": [CLASSES[index] for index in predictions], "confidence": probabilities.max(axis=1)})
     for index, name in enumerate(CLASSES):
@@ -124,13 +108,14 @@ def predict_features(features: np.ndarray, checkpoint: str | Path) -> pd.DataFra
 
 
 def predict_upload(
-    frame: pd.DataFrame, checkpoint: str | Path, preprocessor_path: str | Path
+    frame: pd.DataFrame, bundle_dir: str | Path, preprocessor_path: str | Path
 ) -> pd.DataFrame:
     try:
-        processor = joblib.load(Path(preprocessor_path))
+        verify_asset_manifest(bundle_dir)
+        processor = load_preprocessor(preprocessor_path)
         features = processor.transform(frame)
     except (OSError, ValueError) as error:
         raise ValueError(f"Frozen preprocessor is unavailable or incompatible: {error}") from error
     if features.dtype != np.float32 or not np.isfinite(features).all():
         raise ValueError("Frozen preprocessing produced invalid features")
-    return predict_features(features, checkpoint)
+    return predict_features(features, bundle_dir)

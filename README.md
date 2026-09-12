@@ -2,7 +2,7 @@
 
 TAFR-IDS (Threat-Aware Forgetting Replay for Continual Network Intrusion Detection) compares Naive sequential fine-tuning, Uniform Replay, TAFR-F, TAFR-FU, and full TAFR on UNSW-NB15 under one frozen four-experience protocol.
 
-The completed seed-42 study selected full TAFR before test access using validation balanced accuracy. Full TAFR reached 0.670742 validation balanced accuracy and 0.545146 on the one-time official test evaluation. Detailed generated artifacts and checkpoints stay local; concise honest results are tracked in `results/`.
+The completed seed-42 study selected full TAFR before test access using validation balanced accuracy. Full TAFR reached 0.670742 validation balanced accuracy and 0.545146 on the one-time official test evaluation. Detailed training artifacts and complete checkpoints stay local; concise honest results and minimal inference-only bundles are tracked in `results/` and `models/`.
 
 ## Protocol
 
@@ -10,14 +10,25 @@ The verified mirror has swapped physical filenames: logical training is `UNSW_NB
 
 Validation is a seed-42 stratified 80/20 row split of logical training. The 156-column preprocessor is fitted once on E1 development and frozen. Replay capacity is 2,000 unique samples; E2–E4 batches mix 192 current and 64 replay rows, with proportional replay for the last partial chunk. All methods share initialization, model, optimizer, budget, validation, checkpoint, and device policies.
 
-## Setup and data preparation
+## Clone, install, and run
 
-Python 3.11 or newer is supported; `requirements-repro.txt` pins the verified Python 3.14.7 environment.
+Python 3.11 or newer is supported; `requirements-repro.txt` pins the verified Python 3.14.7 environment. No dataset or retraining is needed for the dashboard, CSV inference, or safe offline Attack Simulation.
 
 ```bash
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements-repro.txt -e '.[dev,dashboard]'
+python scripts/verify_inference_assets.py
+streamlit run dashboard/app.py
+```
+
+The five tracked bundles contain only final model tensors plus architecture and provenance metadata. The shared frozen E1 preprocessor uses skops rather than a pickle checkpoint; all runtime files are checked by `models/shared/SHA256SUMS` before model loading. See [the model bundle documentation](models/README.md) and [fresh-clone audit](docs/clone_usability_audit.md).
+
+## Data preparation
+
+Dataset preparation is needed only to reproduce the research pipeline, not to use the shipped models:
+
+```bash
 
 python scripts/inspect_unsw_nb15.py \
   --data-dir /path/to/archive \
@@ -62,13 +73,7 @@ python -m pytest -q
 python -m pip check
 ```
 
-The dashboard distinguishes validation from final test, explores continual matrices and replay allocation, compares resources and forgetting, supports schema-validated local CSV inference, and provides a development-vector-only Attack Simulation page when ignored local artifacts are available. Prepare its safe offline scenarios with:
-
-```bash
-python scripts/prepare_simulation_scenarios.py \
-  --prepared-dir artifacts/data/prepared \
-  --output artifacts/simulation/scenarios.npz
-```
+The dashboard distinguishes validation from final test, explores continual matrices and replay allocation, compares resources and forgetting, supports schema-validated local CSV inference, and ships a development-vector-only Attack Simulation page. No page loads raw or logical-test data.
 
 See [dashboard documentation](docs/dashboard.md).
 

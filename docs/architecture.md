@@ -1,6 +1,6 @@
 # Planned architecture
 
-The complete pipeline is implemented: inventory/role verification, logical-training loading, deterministic splitting/experiences, frozen E1 preprocessing, Naive and replay training, audit-gated final evaluation, and a local dashboard. The component flow is:
+The complete pipeline is implemented: inventory/role verification, logical-training loading, deterministic splitting/experiences, frozen E1 preprocessing, Naive and replay training, audit-gated final evaluation, portable inference export, and a local dashboard. The component flow is:
 
 `data ingestion → validation/splitting → preprocessing → experience construction → training strategy → replay memory → evaluation → artifact logging`
 
@@ -12,5 +12,6 @@ The complete pipeline is implemented: inventory/role verification, logical-train
 - **Replay memory:** fixed 2,000-item complete replacement with Uniform Replay, TAFR-F, TAFR-FU, and full TAFR quota policies.
 - **Evaluation:** produce required predictive and continual-learning metrics without leaking test information.
 - **Artifact logging:** record configurations, provenance, runtime, memory, metrics, matrices, and generated outputs.
+- **Inference:** load checksum-verified safetensors weights and an allowlisted skops transformer from tracked, inference-only bundles; complete training checkpoints never enter the runtime path.
 
-The data package now separates these implemented responsibilities into `inspection`, `loader`, `splits`, `experiences`, `preprocessing`, and `artifacts`. Non-data package subdirectories still contain import markers only.
+The data package separates preparation responsibilities into `inspection`, `loader`, `splits`, `experiences`, `preprocessing`, and `artifacts`; `tafr_ids.inference` owns the public runtime-bundle boundary.

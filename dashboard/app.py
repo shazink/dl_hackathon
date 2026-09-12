@@ -24,7 +24,8 @@ from dashboard.data import (
 )
 
 DATA_PATH = REPOSITORY / "results" / "dashboard_data.json"
-SCENARIO_PATH = REPOSITORY / "artifacts" / "simulation" / "scenarios.npz"
+MODELS_PATH = REPOSITORY / "models"
+SCENARIO_PATH = MODELS_PATH / "shared" / "simulation_scenarios.npz"
 
 st.set_page_config(page_title="TAFR-IDS", page_icon="🛡️", layout="wide")
 st.title("TAFR-IDS")
@@ -123,14 +124,14 @@ elif view == "Inference Demo":
     method = st.selectbox("Checkpoint", list(methods), index=list(methods).index(selected))
     st.download_button("Download schema-only CSV template", schema_template(), "tafr_ids_schema.csv", "text/csv")
     upload = st.file_uploader("Raw UNSW-NB15 feature CSV (maximum 5 MB / 500 rows)", type="csv")
-    checkpoint = REPOSITORY / "artifacts" / "experiments" / "benchmark_seed42" / method / "checkpoints" / "latest.pt"
-    preprocessor = REPOSITORY / "artifacts" / "data" / "prepared" / "preprocessor.joblib"
-    if not checkpoint.is_file() or not preprocessor.is_file():
-        st.info("The selected local checkpoint or frozen preprocessor is unavailable. Reproduce the benchmark locally to enable inference.")
+    bundle = MODELS_PATH / method
+    preprocessor = MODELS_PATH / "shared" / "preprocessor.skops"
+    if not (bundle / "model.safetensors").is_file() or not preprocessor.is_file():
+        st.info("The selected tracked inference bundle is unavailable.")
     elif upload is not None:
         try:
             frame = validate_upload(upload.getvalue())
-            predictions = predict_upload(frame, checkpoint, preprocessor)
+            predictions = predict_upload(frame, bundle, preprocessor)
             st.dataframe(predictions, width="stretch", hide_index=True)
         except (OSError, KeyError, ValueError) as error:
             st.error(str(error))
@@ -146,11 +147,11 @@ elif view == "Attack Simulation":
     except ValueError as error:
         st.error(str(error))
         scenarios = None
-    checkpoint = REPOSITORY / "artifacts" / "experiments" / "benchmark_seed42" / checkpoint_method / "checkpoints" / "latest.pt"
+    bundle = MODELS_PATH / checkpoint_method
     if scenarios is None:
-        st.info("Simulation scenarios are unavailable. Prepare development-only vectors with `python scripts/prepare_simulation_scenarios.py --prepared-dir artifacts/data/prepared --output artifacts/simulation/scenarios.npz`.")
-    elif not checkpoint.is_file():
-        st.info("The selected local checkpoint is unavailable. Reproduce that benchmark checkpoint locally to enable simulation.")
+        st.info("The tracked development-only simulation scenarios are unavailable.")
+    elif not (bundle / "model.safetensors").is_file():
+        st.info("The selected tracked inference bundle is unavailable.")
     else:
         attack_names = sorted(set(scenarios["class_names"].tolist()) - {"Normal"})
         attack_name = st.selectbox("Development scenario class", attack_names)
@@ -160,7 +161,7 @@ elif view == "Attack Simulation":
         if st.button("Run safe simulation", type="primary"):
             positions = np.flatnonzero(scenarios["class_names"] == attack_name)[:flow_count]
             try:
-                predictions = predict_features(scenarios["X"][positions], checkpoint)
+                predictions = predict_features(scenarios["X"][positions], bundle)
             except ValueError as error:
                 st.error(str(error))
             else:

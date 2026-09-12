@@ -1,0 +1,79 @@
+{
+  "contents": "Final model tensors only; no optimizer, replay buffer, RNG state, samples, or training history.",
+  "dataset_fingerprint": "bec7dd5ec88dc2a0ccc7a07879d338395ed7421750f675fd0339e07dfe0648fa",
+  "feature_schema": "../shared/feature_schema.json",
+  "frozen_preprocessor": "../shared/preprocessor.skops",
+  "global_class_mapping": "../shared/class_mapping.json",
+  "input_dim": 156,
+  "method_id": "tafr_f",
+  "metric_references": {
+    "final_test": {
+      "path": "results/final_test_seed42.csv",
+      "values": {
+        "accuracy": 0.7328985084778701,
+        "balanced_accuracy": 0.5359407850361411,
+        "macro_f1": 0.37941771978249067,
+        "seed": 42,
+        "weighted_f1": 0.7242506889533092
+      }
+    },
+    "validation": {
+      "path": "results/validation_benchmark_seed42.csv",
+      "values": {
+        "accuracy_forgetting": 0.2371436560921793,
+        "balanced_accuracy_forgetting": 0.17953366503492513,
+        "final_average_accuracy": 0.6857638786044484,
+        "final_average_balanced_accuracy": 0.6484756328088851,
+        "final_seen_class_macro_f1": 0.43987547215951517,
+        "forward_transfer": 0.24288034183899745,
+        "peak_cpu_memory_bytes": 1109671936.0,
+        "peak_cuda_allocated_bytes": null,
+        "runtime_seconds": 49.127068391000876,
+        "seed": 42
+      }
+    }
+  },
+  "model_architecture": {
+    "activation": "relu",
+    "dropout": 0.2,
+    "hidden_dims": [
+      256,
+      128
+    ],
+    "initialization": "kaiming",
+    "normalization": "layer_norm"
+  },
+  "output_dim": 10,
+  "preparation_fingerprint": "81362914c00588b8fbf918cb8141a8c24404199336db0e7f943c94a16dca52ea",
+  "preparation_protocol_fingerprints": {
+    "assignment_sha256": "f51d055d4661531ad80a39cbf6c749c4c4a6e3241ece6c132a3f4129d074ae08",
+    "experience_config_sha256": "f81689ca76d7ac88adb80a05caf4187c69662174a46f7a92a666b0d689b85625",
+    "split_manifest_sha256": "2889e52f7f9bbbbd50ad85f7bac7274f1eca97e51df587929fcaae01e2304872"
+  },
+  "schema_version": 1,
+  "seed": 42,
+  "serialization": {
+    "export_pytorch_version": "2.14.0+cu130",
+    "model_format": "safetensors",
+    "model_format_schema_version": 1,
+    "preprocessor_format": "skops",
+    "preprocessor_format_schema_version": 1,
+    "safetensors_version": "0.8.0",
+    "skops_version": "0.14.0",
+    "source_pytorch_version": "2.14.0+cu130"
+  },
+  "sha256": {
+    "class_mapping": "56b149eb01788c68c33a75076e75e975f2c668de5c1bf836cdf509b065439d12",
+    "feature_schema": "5f5d33e87199ff4bd997b9c13176a67fe4651206c539643a17134a4a54e10cb9",
+    "model_weights": "26278986b8628a35664c3f6d321e818597f07de0790761af348f03162237eb99",
+    "preprocessor": "5e6e57876e13f2190ea90e8d5248c3cd23dc21d50d22cd8fd0b5111642b539fa"
+  },
+  "source_configuration_fingerprint": "2f886a20ff01503d8c6907af41ba8627f9bd2e976ef61b64136618d222c2e02c",
+  "source_experiment": {
+    "checkpoint_sha256": "0b79f037111e2eb9eadf6fc8b3347c9110934486d9c7f2862332056ed9e53cf9",
+    "configuration_fingerprint": "2f886a20ff01503d8c6907af41ba8627f9bd2e976ef61b64136618d222c2e02c",
+    "prepared_data_fingerprint": "81362914c00588b8fbf918cb8141a8c24404199336db0e7f943c94a16dca52ea",
+    "results_sha256": "46a7640ffbf26be992518551f5fe6009429cf138acd18a1707c569a8bbd78cf1"
+  },
+  "source_experiment_fingerprint": "36be2d1bc15cd8d47f799c88b745fc387b692d0869163f3404cbed44be60f089"
+}

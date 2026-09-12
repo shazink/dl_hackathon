@@ -46,6 +46,7 @@ pandas==3.0.5
 pillow==12.3.0
 plotly==7.0.0
 pluggy==1.6.0
+prettytable==3.18.0
 protobuf==7.36.1
 pyarrow==25.0.1
 pydeck==0.9.3
@@ -56,10 +57,12 @@ python-multipart==0.0.32
 referencing==0.37.0
 requests==2.34.2
 rpds-py==2026.6.3
+safetensors==0.8.0
 scikit-learn==1.9.1
 scipy==1.18.1
 setuptools==84.0.0
 six==1.17.0
+skops==0.14.0
 starlette==1.6.0
 streamlit==1.63.0
 sympy==1.14.0
@@ -71,4 +74,5 @@ typing_extensions==4.16.0
 urllib3==2.7.0
 uvicorn==0.52.4
 watchdog==6.0.0
+wcwidth==0.8.3
 websockets==16.1.1
