@@ -1,0 +1,46 @@
+protocol_version = "1.0"
+seed = 42
+target = "attack_cat"
+classifier = "single_head_global_classes"
+allocation_algorithm = "Development attack counts descending, canonical name ascending tie-break; snake 1,2,3,4,4,3,2,1 repeated"
+background_policy = "Normal recurs; each partition independently shuffled with NumPy PCG64 SeedSequence([42, partition_code]); array_split into four disjoint balanced subsets"
+development_validation_policy = "sklearn train_test_split, test_size=0.2, stratify=canonical attack_cat, random_state=42; sorted zero-based indices; duplicate feature rows preserved"
+target_normalization = "strip and casefold; canonical names plus backdoors -> Backdoor; reject unknown/missing"
+preprocessing_policy = "Fit once on E1 development only; freeze; transform all later and validation subsets"
+logical_training_sha256 = "bec7dd5ec88dc2a0ccc7a07879d338395ed7421750f675fd0339e07dfe0648fa"
+split_assignment_fingerprint = "f51d055d4661531ad80a39cbf6c749c4c4a6e3241ece6c132a3f4129d074ae08"
+
+[global_class_mapping]
+Normal = 0
+Analysis = 1
+Backdoor = 2
+DoS = 3
+Exploits = 4
+Fuzzers = 5
+Generic = 6
+Reconnaissance = 7
+Shellcode = 8
+Worms = 9
+
+[attack_class_counts]
+Generic = 32000
+Exploits = 26714
+Fuzzers = 14547
+DoS = 9811
+Reconnaissance = 8393
+Analysis = 1600
+Backdoor = 1397
+Shellcode = 906
+Worms = 104
+
+[experiences.E1]
+introduced_attack_classes = ["Generic", "Shellcode", "Worms"]
+
+[experiences.E2]
+introduced_attack_classes = ["Exploits", "Backdoor"]
+
+[experiences.E3]
+introduced_attack_classes = ["Fuzzers", "Analysis"]
+
+[experiences.E4]
+introduced_attack_classes = ["DoS", "Reconnaissance"]

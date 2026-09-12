@@ -1,0 +1,16 @@
+dataset = "UNSW-NB15"
+mirror_url = "https://www.kaggle.com/datasets/mrwellsdavid/unsw-nb15/code"
+official_metadata_url = "https://research.unsw.edu.au/projects/unsw-nb15-dataset"
+resolution_status = "swapped_filenames"
+provenance_status = "Official split roles verified by documented counts and structural checks; byte-for-byte equality with an official UNSW-hosted copy remains unverified. Kaggle is a mirror, not the primary authority."
+note = "The mirror's physical presplit filenames are swapped: logical training uses UNSW_NB15_testing-set.csv and logical testing uses UNSW_NB15_training-set.csv. Files are not renamed or modified."
+
+[training]
+physical_filename = "UNSW_NB15_testing-set.csv"
+expected_rows = 175341
+sha256 = "bec7dd5ec88dc2a0ccc7a07879d338395ed7421750f675fd0339e07dfe0648fa"
+
+[testing]
+physical_filename = "UNSW_NB15_training-set.csv"
+expected_rows = 82332
+sha256 = "734fe6642edf758f7c94d7d9149426b49d202fe8e7bf0bef47392489c3c0a559"
