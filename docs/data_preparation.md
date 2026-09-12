@@ -35,7 +35,7 @@ Run from the repository root after installing the package:
 
 ```bash
 python scripts/prepare_unsw_nb15.py \
-  --data-dir ~/Downloads/archive \
+  --data-dir /path/to/archive \
   --split-manifest configs/unsw_nb15_splits.toml \
   --experience-config configs/experiences.toml \
   --output-dir artifacts/data/prepared

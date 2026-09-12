@@ -9,11 +9,15 @@ description = "Threat-Aware Forgetting Replay for continual network intrusion de
 readme = "README.md"
 requires-python = ">=3.11"
 license = "MIT"
-dependencies = ["numpy>=2", "pandas>=2.2", "scikit-learn>=1.6", "joblib>=1.4"]
+dependencies = ["numpy>=2", "pandas>=2.2", "scikit-learn>=1.6", "joblib>=1.4", "torch>=2.8"]
 
 [project.optional-dependencies]
 dev = [
   "pytest>=8",
+]
+dashboard = [
+  "plotly>=6",
+  "streamlit>=1.49",
 ]
 
 [tool.setuptools.packages.find]

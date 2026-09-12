@@ -8,7 +8,7 @@
 
 **Acceptance:** user-provided UNSW-NB15 files are located without committing them; official split identity, schema, training class counts, integrity checks, and fingerprints are recorded; test data does not inform design.
 
-Completed under the documented count-plus-structure role-verification rule; official byte equality remains unverified. See `.ai/data_card.md`. Phases 5–10 remain planned.
+Completed under the documented count-plus-structure role-verification rule; official byte equality remains unverified. Phases 5–10 are also complete for the frozen seed-42 study.
 
 ## 3. Experience-sequence finalization
 

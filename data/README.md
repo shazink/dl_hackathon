@@ -2,10 +2,10 @@
 
 Place local UNSW-NB15 files under `data/raw/` or `data/downloads/`. Derived data may use `data/interim/` and `data/processed/`. Contents of those directories are ignored and must not be committed.
 
-The current dataset is external at `/home/Ima/Downloads/archive`; keep it there. After installing the package, run:
+Keep the downloaded dataset in an external local directory. After installing the package, run:
 
 ```bash
-python scripts/inspect_unsw_nb15.py --data-dir ~/Downloads/archive \
+python scripts/inspect_unsw_nb15.py --data-dir /path/to/archive \
   --split-manifest configs/unsw_nb15_splits.toml \
   --output artifacts/data/unsw_nb15_profile.json
 ```

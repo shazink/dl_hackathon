@@ -23,6 +23,15 @@ dist/
 *.swp
 .DS_Store
 
+# Local agent state and prompt/scratch material
+.ai/
+AGENTS.md
+.agents/
+.codex/
+*PROMPT*.md
+*.prompt.md
+scratch/
+
 # Secrets (keep the documented template)
 .env
 .env.*
@@ -43,5 +52,10 @@ outputs/
 checkpoints/
 logs/
 reports/generated/
+screenshots/
+*.ckpt
+*.pt
+*.pth
+*.onnx
 wandb/
 mlruns/

@@ -1,0 +1,38 @@
+method = "naive"
+seed = 42
+device = "auto"
+
+[data]
+expected_input_dim = 156
+split_manifest = "configs/unsw_nb15_splits.toml"
+experience_config = "configs/experiences.toml"
+
+[model]
+hidden_dims = [256, 128]
+normalization = "layer_norm"
+activation = "relu"
+dropout = 0.20
+initialization = "kaiming"
+
+[training]
+loss = "cross_entropy"
+optimizer = "adamw"
+learning_rate = 0.001
+weight_decay = 0.0001
+batch_size = 256
+epochs_per_experience = 20
+gradient_clip_norm = 5.0
+scheduler = "none"
+early_stopping = false
+model_selection = "final_epoch"
+optimizer_policy = "reset_each_experience"
+num_workers = 0
+shuffle_training = true
+shuffle_validation = false
+
+[evaluation]
+zero_division = 0
+primary_forgetting_metric = "balanced_accuracy"
+evaluate_all_validation_experiences = true
+evaluate_seen_union = true
+logical_test_evaluation = false

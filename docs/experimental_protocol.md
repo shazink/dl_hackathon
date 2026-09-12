@@ -8,8 +8,8 @@
 - Four experiences are locked in `configs/experiences.toml` using development-only attack counts and the prescribed snake algorithm. Normal recurs through disjoint subsets; each attack class is introduced exactly once.
 - Global deterministic seed: 42. Seed Python, NumPy, PyTorch, CUDA where applicable, and DataLoader workers.
 - Fit preprocessing once on E1 development only; freeze it for future experiences and validation.
-- Core methods: naive sequential fine-tuning, uniform replay, and TAFR.
-- Planned ablations: TAFR-F, TAFR-FU, and full TAFR, subject to the authoritative project specification. Include at least one ablation in the final study.
+- Compared methods: naive sequential fine-tuning, Uniform Replay, TAFR-F, TAFR-FU, and full TAFR.
+- Replay capacity is 2,000 unique samples. E2–E4 use a 0.25 replay fraction (192 current plus 64 replay for full batches); E1 follows the exact Naive path.
 - The final pipeline must support a reproducible one-command run.
 - The final report is limited to four pages.
 - Never fabricate, hide, or silently replace experimental results.
@@ -42,14 +42,20 @@ All methods must use the same data split, class order, architecture, optimizer, 
 
 Metric definitions, aggregation rules, and measurement tooling must be fixed before results are produced.
 
-## Unresolved decisions
+## Locked replay extension
 
-- Authoritative definitions of TAFR-F, TAFR-FU, and full TAFR.
-- Model architecture, optimizer, training budget, replay-memory budget, and metric implementation details.
-- Which planned ablation(s) will appear in the final study.
+After training experience `t`, legal buffer candidates are only the retained prior buffer plus current development samples. Discarded historical samples never return. Forgetting is the drop from best prior retained-buffer recall to current retained-buffer recall; uncertainty is mean `1 - max softmax` over same-class candidates; rarity is inverse square-root cumulative development support. Signals are independently min-max normalized, with a constant signal mapped to zero.
+
+Uniform Replay uses priority 1. TAFR-F uses normalized forgetting; TAFR-FU averages normalized forgetting and uncertainty; full TAFR averages normalized forgetting, uncertainty, and rarity. All-zero active priorities fall back to uniform allocation and are recorded. Bounded largest-remainder quotas and SHA-256-derived within-class permutations are deterministic. TAFR affects class allocation only.
+
+Validation chooses the deployed method using, in order: highest final average balanced accuracy, higher final seen-class Macro-F1, lower balanced-accuracy forgetting, then lexical method ID. This choice is frozen in an audit artifact before final-test access.
 
 ## Locked Phase 3/4 extension
 
 The target is canonical `attack_cat`, with `label` used only for binary consistency checks. Exclude both targets and `id` from features. A single immutable global class map is shared across methods and experiences. Use seed-42 stratified 80/20 development/validation row assignments from logical training only. The tracked experience config records all counts, assignments, policies, and fingerprints. See `docs/data_preparation.md` for the exact specification and verified sizes.
 
 The user-required row split preserves duplicate feature vectors and conflicting labels. Zero row overlap is verified; feature-vector overlap across development/validation is possible and may inflate validation performance. This limitation must be reported in the final study. No deduplication, relabeling, or grouped split is silently substituted.
+
+## Locked Phase 5 extension
+
+The shared baseline architecture, optimizer, training budget, deterministic execution rules, validation schedule, continual-learning formulae, and artifact contract are fixed before model results in `configs/experiments/naive.toml` and documented in `docs/naive_baseline.md`. Naive training carries model weights across E1–E4, resets AdamW at each experience, and consumes only the current development subset. It evaluates random initialization and all task validation subsets without using metrics to alter training. The logical test split remains untouched.
