@@ -7,7 +7,15 @@ import pytest
 import joblib
 import torch
 
-from dashboard.data import MAX_UPLOAD_BYTES, load_dashboard_data, predict_upload, schema_template, validate_upload
+from dashboard.data import (
+    MAX_UPLOAD_BYTES,
+    load_dashboard_data,
+    load_simulation_scenarios,
+    predict_features,
+    predict_upload,
+    schema_template,
+    validate_upload,
+)
 from tafr_ids.data.inspection import CATEGORICAL, FEATURES
 from tafr_ids.data.preprocessing import FrozenPreprocessor
 from tafr_ids.models.mlp import TabularMLP
@@ -84,6 +92,34 @@ def test_local_prediction_probabilities_are_finite(tmp_path):
     assert prediction[probability_columns].sum(axis=1).iloc[0] == pytest.approx(1.0)
 
 
+def test_simulation_scenarios_and_transformed_prediction(tmp_path):
+    scenario_path = tmp_path / "scenarios.npz"
+    features = np.zeros((2, 156), dtype=np.float32)
+    np.savez(
+        scenario_path,
+        schema_version=np.asarray(1, dtype=np.int64),
+        X=features,
+        y=np.asarray([0, 6], dtype=np.int64),
+        source_indices=np.asarray([10, 20], dtype=np.int64),
+        experiences=np.asarray(["E1", "E1"]),
+        class_names=np.asarray(["Normal", "Generic"]),
+    )
+    scenarios = load_simulation_scenarios(scenario_path)
+    assert scenarios is not None and scenarios["X"].shape == (2, 156)
+    model = TabularMLP(156, 10, [8, 4], 0.0)
+    checkpoint = tmp_path / "checkpoint.pt"
+    torch.save({"config": {"model": {"hidden_dims": [8, 4], "dropout": 0.0}}, "model": model.state_dict()}, checkpoint)
+    prediction = predict_features(scenarios["X"], checkpoint)
+    assert len(prediction) == 2
+
+
+def test_simulation_scenarios_reject_corruption(tmp_path):
+    bad = tmp_path / "bad.npz"
+    np.savez(bad, schema_version=np.asarray(1, dtype=np.int64), X=np.zeros((1, 3), dtype=np.float32))
+    with pytest.raises(ValueError, match="corrupt"):
+        load_simulation_scenarios(bad)
+
+
 def test_streamlit_app_starts_in_test_harness():
     streamlit = pytest.importorskip("streamlit")
     from streamlit.testing.v1 import AppTest
@@ -91,3 +127,29 @@ def test_streamlit_app_starts_in_test_harness():
     app = Path(__file__).resolve().parents[2] / "dashboard" / "app.py"
     result = AppTest.from_file(str(app)).run(timeout=20)
     assert not result.exception
+
+
+def test_streamlit_all_views_and_controls():
+    streamlit = pytest.importorskip("streamlit")
+    from streamlit.testing.v1 import AppTest
+
+    app = Path(__file__).resolve().parents[2] / "dashboard" / "app.py"
+    result = AppTest.from_file(str(app)).run(timeout=20)
+    views = result.sidebar.radio[0].options
+    assert "Attack Simulation" in views
+    for view in views:
+        result.sidebar.radio[0].set_value(view)
+        result.run(timeout=20)
+        assert not result.exception, view
+        if view in {"Continual Learning", "TAFR Replay Intelligence", "Inference Demo"}:
+            for option in result.selectbox[0].options:
+                result.selectbox[0].set_value(option)
+                result.run(timeout=20)
+                assert not result.exception, f"{view}: {option}"
+        if view == "Attack Simulation":
+            assert result.warning
+            assert result.selectbox
+            if result.button:
+                result.button[0].click()
+                result.run(timeout=20)
+                assert not result.exception

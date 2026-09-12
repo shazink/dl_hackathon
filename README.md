@@ -62,7 +62,15 @@ python -m pytest -q
 python -m pip check
 ```
 
-The dashboard distinguishes validation from final test, explores continual matrices and replay allocation, compares resources and forgetting, and supports schema-validated local CSV inference when ignored checkpoints are available. See [dashboard documentation](docs/dashboard.md).
+The dashboard distinguishes validation from final test, explores continual matrices and replay allocation, compares resources and forgetting, supports schema-validated local CSV inference, and provides a development-vector-only Attack Simulation page when ignored local artifacts are available. Prepare its safe offline scenarios with:
+
+```bash
+python scripts/prepare_simulation_scenarios.py \
+  --prepared-dir artifacts/data/prepared \
+  --output artifacts/simulation/scenarios.npz
+```
+
+See [dashboard documentation](docs/dashboard.md).
 
 ## Results and documentation
 

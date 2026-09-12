@@ -4,14 +4,23 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 import streamlit as st
 
 from dashboard.components import comparison_chart, matrix_heatmap, scatter_tradeoff
-from dashboard.data import load_dashboard_data, predict_upload, schema_template, validate_upload
+from dashboard.data import (
+    load_dashboard_data,
+    load_simulation_scenarios,
+    predict_features,
+    predict_upload,
+    schema_template,
+    validate_upload,
+)
 
 REPOSITORY = Path(__file__).resolve().parents[1]
 DATA_PATH = REPOSITORY / "results" / "dashboard_data.json"
+SCENARIO_PATH = REPOSITORY / "artifacts" / "simulation" / "scenarios.npz"
 
 st.set_page_config(page_title="TAFR-IDS", page_icon="🛡️", layout="wide")
 st.title("TAFR-IDS")
@@ -28,7 +37,7 @@ if data is None:
 
 view = st.sidebar.radio(
     "View",
-    ("Overview", "Continual Learning", "TAFR Replay Intelligence", "Method Comparison", "Inference Demo", "Methodology and Limitations"),
+    ("Overview", "Continual Learning", "TAFR Replay Intelligence", "Method Comparison", "Inference Demo", "Attack Simulation", "Methodology and Limitations"),
 )
 comparison = data["comparison"]
 methods = data["methods"]
@@ -44,8 +53,8 @@ if view == "Overview":
     columns[2].metric("Final-test balanced accuracy", f"{row['test_balanced_accuracy']:.3f}")
     columns[3].metric("Final-test Macro-F1", f"{row['test_macro_f1']:.3f}")
     left, right = st.columns(2)
-    left.plotly_chart(comparison_chart(comparison, "validation_balanced_accuracy", "Validation comparison"), use_container_width=True)
-    right.plotly_chart(comparison_chart(comparison, "test_balanced_accuracy", "One-time final-test comparison"), use_container_width=True)
+    left.plotly_chart(comparison_chart(comparison, "validation_balanced_accuracy", "Validation comparison"), width="stretch")
+    right.plotly_chart(comparison_chart(comparison, "test_balanced_accuracy", "One-time final-test comparison"), width="stretch")
     st.info(data["selection"]["explanation"])
 
 elif view == "Continual Learning":
@@ -56,7 +65,7 @@ elif view == "Continual Learning":
     tabs = st.tabs(["Accuracy", "Balanced accuracy", "Macro-F1"])
     for tab, metric in zip(tabs, ("accuracy", "balanced_accuracy", "macro_f1"), strict=True):
         with tab:
-            st.plotly_chart(matrix_heatmap(record["matrices"][metric], record["matrix_axes"]["rows"], record["matrix_axes"]["columns"], metric.replace("_", " ").title()), use_container_width=True)
+            st.plotly_chart(matrix_heatmap(record["matrices"][metric], record["matrix_axes"]["rows"], record["matrix_axes"]["columns"], metric.replace("_", " ").title()), width="stretch")
     metrics = record["continual_metrics"]
     c1, c2 = st.columns(2)
     c1.metric("Balanced-accuracy forgetting", f"{metrics['average_forgetting']:.3f}")
@@ -67,10 +76,10 @@ elif view == "Continual Learning":
         for class_name, values in evaluation["per_class"].items():
             if values["recall"] is not None:
                 recalls.append({"experience": experience, "class": class_name, "recall": values["recall"]})
-    st.dataframe(pd.DataFrame(recalls), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(recalls), width="stretch", hide_index=True)
     st.subheader("Final official-test confusion matrix")
     test = methods[method]["test"]
-    st.plotly_chart(matrix_heatmap(test["confusion_matrix"], test["class_order"], test["class_order"], "Final confusion matrix"), use_container_width=True)
+    st.plotly_chart(matrix_heatmap(test["confusion_matrix"], test["class_order"], test["class_order"], "Final confusion matrix"), width="stretch")
 
 elif view == "TAFR Replay Intelligence":
     st.header("TAFR replay intelligence")
@@ -87,19 +96,19 @@ elif view == "TAFR Replay Intelligence":
             for class_id, value in values.items():
                 signal_rows.append({"experience": experience, "class_id": class_id, "signal": signal, "raw": value, "normalized": update["normalized_signals"][signal][class_id]})
     st.subheader("Buffer allocation")
-    st.dataframe(pd.DataFrame(allocation_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(allocation_rows), width="stretch", hide_index=True)
     st.subheader("Signals")
-    st.dataframe(pd.DataFrame(signal_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(signal_rows), width="stretch", hide_index=True)
     occupancy = [{"experience": key, "occupancy": value["buffer_size"], "capacity": value["buffer_capacity"]} for key, value in updates.items()]
-    st.dataframe(pd.DataFrame(occupancy), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(occupancy), width="stretch", hide_index=True)
 
 elif view == "Method Comparison":
     st.header("Method comparison")
-    st.dataframe(pd.DataFrame(comparison), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(comparison), width="stretch", hide_index=True)
     left, right = st.columns(2)
-    left.plotly_chart(scatter_tradeoff(comparison), use_container_width=True)
-    right.plotly_chart(comparison_chart(comparison, "validation_macro_f1", "Validation Macro-F1"), use_container_width=True)
-    st.plotly_chart(comparison_chart(comparison, "runtime_seconds", "Training runtime (seconds)"), use_container_width=True)
+    left.plotly_chart(scatter_tradeoff(comparison), width="stretch")
+    right.plotly_chart(comparison_chart(comparison, "validation_macro_f1", "Validation Macro-F1"), width="stretch")
+    st.plotly_chart(comparison_chart(comparison, "runtime_seconds", "Training runtime (seconds)"), width="stretch")
     tafr = next(item for item in comparison if item["method"] == "tafr")
     naive = next(item for item in comparison if item["method"] == "naive")
     uniform = next(item for item in comparison if item["method"] == "uniform")
@@ -118,10 +127,56 @@ elif view == "Inference Demo":
         try:
             frame = validate_upload(upload.getvalue())
             predictions = predict_upload(frame, checkpoint, preprocessor)
-            st.dataframe(predictions, use_container_width=True, hide_index=True)
+            st.dataframe(predictions, width="stretch", hide_index=True)
         except (OSError, KeyError, ValueError) as error:
             st.error(str(error))
     st.caption("Uploads are processed in memory and are never persisted. Official test rows are neither bundled nor automatically loaded.")
+
+elif view == "Attack Simulation":
+    st.header("Attack Simulation")
+    st.warning("Safe offline simulation only: no packets are sent, no hosts are scanned, no targets are contacted, and no network or firewall settings are changed.")
+    st.write("This page runs frozen local models on a small, deterministic set of already-preprocessed development vectors. Outputs are live scenario inferences, not benchmark metrics or real-world attack results.")
+    checkpoint_method = st.selectbox("Simulation checkpoint", list(methods), index=list(methods).index(selected))
+    try:
+        scenarios = load_simulation_scenarios(SCENARIO_PATH)
+    except ValueError as error:
+        st.error(str(error))
+        scenarios = None
+    checkpoint = REPOSITORY / "artifacts" / "experiments" / "benchmark_seed42" / checkpoint_method / "checkpoints" / "latest.pt"
+    if scenarios is None:
+        st.info("Simulation scenarios are unavailable. Prepare development-only vectors with `python scripts/prepare_simulation_scenarios.py --prepared-dir artifacts/data/prepared --output artifacts/simulation/scenarios.npz`.")
+    elif not checkpoint.is_file():
+        st.info("The selected local checkpoint is unavailable. Reproduce that benchmark checkpoint locally to enable simulation.")
+    else:
+        attack_names = sorted(set(scenarios["class_names"].tolist()) - {"Normal"})
+        attack_name = st.selectbox("Development scenario class", attack_names)
+        available = int((scenarios["class_names"] == attack_name).sum())
+        flow_count = st.slider("Flow vectors", 1, available, min(4, available))
+        response_threshold = st.slider("High-priority confidence threshold", 0.50, 0.99, 0.80, 0.01)
+        if st.button("Run safe simulation", type="primary"):
+            positions = np.flatnonzero(scenarios["class_names"] == attack_name)[:flow_count]
+            try:
+                predictions = predict_features(scenarios["X"][positions], checkpoint)
+            except ValueError as error:
+                st.error(str(error))
+            else:
+                result = predictions[["predicted_class", "confidence"]].copy()
+                result.insert(0, "scenario_class", attack_name)
+                result.insert(1, "source_experience", scenarios["experiences"][positions])
+                result["simulated_response"] = [
+                    "Analyst review: model did not flag the scenario" if name == "Normal"
+                    else "High-priority alert: validate and review containment playbook" if confidence >= response_threshold
+                    else "Triage alert: corroborate with additional telemetry"
+                    for name, confidence in zip(result["predicted_class"], result["confidence"], strict=True)
+                ]
+                flagged = int((result["predicted_class"] != "Normal").sum())
+                high_priority = int(((result["predicted_class"] != "Normal") & (result["confidence"] >= response_threshold)).sum())
+                c1, c2, c3 = st.columns(3)
+                c1.metric("Flow vectors assessed", len(result))
+                c2.metric("Simulated alerts", flagged)
+                c3.metric("High-priority reviews", high_priority)
+                st.dataframe(result, width="stretch", hide_index=True)
+                st.caption("Responses are recommendations displayed in this browser session only. No enforcement action is available or performed.")
 
 else:
     st.header("Methodology and limitations")

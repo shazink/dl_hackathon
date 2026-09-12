@@ -4,4 +4,4 @@
 
 `experiences.toml` locks protocol v1.0, multiclass indices, development-only attack counts and snake allocation, recurring Normal policy, source fingerprint, and assignment fingerprint. Preparation recomputes and validates it before fitting any transformer. Do not alter it in response to model results.
 
-Training model configurations are not yet implemented.
+The files under `configs/experiments/` are the implemented, frozen model/training manifests for Naive, Uniform Replay, TAFR-F, TAFR-FU, and full TAFR. Do not alter them in response to validation or finalized test results.
