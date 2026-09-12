@@ -1,5 +1,7 @@
 import json
 from pathlib import Path
+import subprocess
+import sys
 
 import numpy as np
 import pandas as pd
@@ -127,6 +129,19 @@ def test_streamlit_app_starts_in_test_harness():
     app = Path(__file__).resolve().parents[2] / "dashboard" / "app.py"
     result = AppTest.from_file(str(app)).run(timeout=20)
     assert not result.exception
+
+
+def test_streamlit_app_starts_outside_repository(tmp_path):
+    app = Path(__file__).resolve().parents[2] / "dashboard" / "app.py"
+    code = (
+        "from streamlit.testing.v1 import AppTest; "
+        f"result=AppTest.from_file({str(app)!r}).run(timeout=20); "
+        "assert not result.exception, [item.value for item in result.exception]"
+    )
+    completed = subprocess.run(
+        [sys.executable, "-c", code], cwd=tmp_path, capture_output=True, text=True, timeout=30
+    )
+    assert completed.returncode == 0, completed.stdout + completed.stderr
 
 
 def test_streamlit_all_views_and_controls():

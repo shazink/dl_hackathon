@@ -3,10 +3,15 @@
 from __future__ import annotations
 
 from pathlib import Path
+import sys
 
 import numpy as np
 import pandas as pd
 import streamlit as st
+
+REPOSITORY = Path(__file__).resolve().parents[1]
+if str(REPOSITORY) not in sys.path:
+    sys.path.insert(0, str(REPOSITORY))
 
 from dashboard.components import comparison_chart, matrix_heatmap, scatter_tradeoff
 from dashboard.data import (
@@ -18,7 +23,6 @@ from dashboard.data import (
     validate_upload,
 )
 
-REPOSITORY = Path(__file__).resolve().parents[1]
 DATA_PATH = REPOSITORY / "results" / "dashboard_data.json"
 SCENARIO_PATH = REPOSITORY / "artifacts" / "simulation" / "scenarios.npz"
 
