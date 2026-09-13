@@ -1,4 +1,3 @@
-"""Evaluation boundary."""
 """Evaluation and continual-learning reporting."""
 
 from tafr_ids.evaluation.metrics import classification_metrics
