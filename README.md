@@ -1,93 +1,175 @@
-# TAFR-IDS
+# TAFR-IDS — Threat-Aware Forgetting Replay for Continual Network Intrusion Detection
 
-TAFR-IDS (Threat-Aware Forgetting Replay for Continual Network Intrusion Detection) compares Naive sequential fine-tuning, Uniform Replay, TAFR-F, TAFR-FU, and full TAFR on UNSW-NB15 under one frozen four-experience protocol.
+TAFR-IDS is an offline continual-learning intrusion-detection prototype built on the UNSW-NB15 dataset. It studies catastrophic forgetting as one multiclass neural classifier learns four sequential intrusion experiences. Every replay method uses the same fixed 2,000-example memory; TAFR changes how that memory is allocated across classes using forgetting, uncertainty, and rarity signals.
 
-The completed seed-42 study selected full TAFR before test access using validation balanced accuracy. Full TAFR reached 0.670742 validation balanced accuracy and 0.545146 on the one-time official test evaluation. Detailed training artifacts and complete checkpoints stay local; concise honest results and minimal inference-only bundles are tracked in `results/` and `models/`.
+The repository includes the frozen seed-42 results and five inference-only model bundles. A clean clone can run the dashboard, CSV inference, and the safe Attack Simulation without the training dataset or the original training machine.
 
-## Protocol
+## Main result
 
-The verified mirror has swapped physical filenames: logical training is `UNSW_NB15_testing-set.csv` (175,341 rows) and logical testing is `UNSW_NB15_training-set.csv` (82,332 rows). Place the downloaded UNSW-NB15 files together in a local directory. The manifest pins logical roles, counts, schemas, and SHA-256 values; official byte identity remains unverified.
+Full TAFR was selected before final-test access using the declared validation ranking rule. Balanced accuracy was the primary selection metric.
 
-Validation is a seed-42 stratified 80/20 row split of logical training. The 156-column preprocessor is fitted once on E1 development and frozen. Replay capacity is 2,000 unique samples; E2–E4 batches mix 192 current and 64 replay rows, with proportional replay for the last partial chunk. All methods share initialization, model, optimizer, budget, validation, checkpoint, and device policies.
+| Method | Final average validation balanced accuracy |
+| --- | ---: |
+| Naive | 0.4517 |
+| TAFR-F | 0.6485 |
+| TAFR-FU | 0.6603 |
+| Uniform Replay | 0.6616 |
+| **Full TAFR** | **0.6707** |
 
-## Clone, install, and run
+The selected Full TAFR model achieved **0.5451 final-test balanced accuracy** in the one-time finalized evaluation. Validation/model-selection results and final-test results are intentionally distinguished; complete tracked summaries are in [validation_benchmark_seed42.csv](results/validation_benchmark_seed42.csv), [final_test_seed42.csv](results/final_test_seed42.csv), [the benchmark documentation](docs/benchmark_results.md), and [the final-evaluation record](docs/final_evaluation.md).
 
-Python 3.11 or newer is supported; `requirements-repro.txt` pins the verified Python 3.14.7 environment. No dataset or retraining is needed for the dashboard, CSV inference, or safe offline Attack Simulation.
+## Architecture
+
+```text
+UNSW-NB15
+    ↓
+split verification
+    ↓
+development / validation
+    ↓
+sequential experiences E1–E4
+    ↓
+frozen preprocessing
+    ↓
+MLP classifier
+    ↓
+continual-learning method
+    ↓
+evaluation
+    ↓
+dashboard
+```
+
+The classifier has 156 inputs, hidden widths 256 and 128, LayerNorm, ReLU, dropout 0.20, and one ten-class output head. Preprocessing is fitted once on E1 development data and then frozen. See [architecture](docs/architecture.md) and the [experimental protocol](docs/experimental_protocol.md).
+
+## Continual-learning experiences
+
+| Experience | Newly introduced attack classes |
+| --- | --- |
+| E1 | Generic, Shellcode, Worms |
+| E2 | Exploits, Backdoor |
+| E3 | Fuzzers, Analysis |
+| E4 | DoS, Reconnaissance |
+
+Normal traffic appears in every experience using different, mutually disjoint records. Each attack class is introduced exactly once. This ordering is a fixed, development-count-derived simulation of class-incremental learning, not a claim that the dataset is a chronological threat stream.
+
+## Methods and TAFR
+
+- **Naive:** sequential fine-tuning on only the current experience.
+- **Uniform Replay:** fixed-memory replay with equal class priority.
+- **TAFR-F:** replay allocation driven by normalized retained-memory forgetting.
+- **TAFR-FU:** equal-weight normalized forgetting and uncertainty.
+- **Full TAFR:** equal-weight normalized forgetting, uncertainty, and rarity.
+
+For class `c`, the signals are:
+
+- forgetting: the nonnegative drop from the best prior recall to current recall on retained training memory;
+- uncertainty: mean `1 - max softmax probability` over eligible candidates;
+- rarity: inverse square root of cumulative development support.
+
+Each signal is independently min-max normalized. The resulting priority controls class quotas inside the same fixed 2,000-example replay capacity. TAFR does **not** change the neural-network architecture, optimizer, training budget, or evaluation schedule. Exact allocation, fallback, and deterministic selection rules are in [TAFR method](docs/tafr_method.md).
+
+## Repository structure
+
+```text
+.
+├── configs/       # frozen split, experience, and experiment manifests
+├── dashboard/     # Streamlit application and display/data helpers
+├── data/          # data-location policy; raw data is not tracked
+├── docs/          # architecture, protocol, results, and usage guides
+├── models/        # finalized inference-only assets and checksums
+├── results/       # finalized public CSV/JSON result summaries
+├── scripts/       # inspection, preparation, experiment, export, and verification CLIs
+├── src/tafr_ids/  # installable data, training, evaluation, model, and inference code
+└── tests/         # unit, integration, dashboard, and asset tests
+```
+
+The existing layout keeps public runtime assets separate from ignored training artifacts; no broad restructuring is required.
+
+## Quick start
+
+Python 3.11 or newer is supported.
 
 ```bash
+git clone https://github.com/shazink/dl_hackathon.git
+cd dl_hackathon
 python -m venv .venv
 source .venv/bin/activate
-python -m pip install -r requirements-repro.txt -e '.[dev,dashboard]'
+python -m pip install -e '.[dev,dashboard]'
 python scripts/verify_inference_assets.py
-streamlit run dashboard/app.py
-```
-
-The five tracked bundles contain only final model tensors plus architecture and provenance metadata. The shared frozen E1 preprocessor uses skops rather than a pickle checkpoint; all runtime files are checked by `models/shared/SHA256SUMS` before model loading. See [the model bundle documentation](models/README.md) and [fresh-clone audit](docs/clone_usability_audit.md).
-
-## Data preparation
-
-Dataset preparation is needed only to reproduce the research pipeline, not to use the shipped models:
-
-```bash
-
-python scripts/inspect_unsw_nb15.py \
-  --data-dir /path/to/archive \
-  --split-manifest configs/unsw_nb15_splits.toml \
-  --output artifacts/data/unsw_nb15_profile.json
-
-python scripts/prepare_unsw_nb15.py \
-  --data-dir /path/to/archive \
-  --split-manifest configs/unsw_nb15_splits.toml \
-  --experience-config configs/experiences.toml \
-  --output-dir artifacts/data/prepared
-```
-
-Preparation writes only ignored local artifacts and never creates logical-test arrays. See [data preparation](docs/data_preparation.md) and the [experimental protocol](docs/experimental_protocol.md).
-
-## Training and benchmark
-
-Run one method with its matching config:
-
-```bash
-python scripts/run_experiment.py --method tafr \
-  --config configs/experiments/tafr.toml \
-  --prepared-dir artifacts/data/prepared \
-  --output-dir artifacts/experiments/tafr_seed42
-```
-
-Run the controlled five-method benchmark, audit, frozen selection, and final one-time test evaluation only for a fresh protocol whose official test has not been consumed:
-
-```bash
-python scripts/run_benchmark.py \
-  --prepared-dir artifacts/data/prepared \
-  --data-dir /path/to/archive
-```
-
-Do not rerun the finalized seed-42 protocol based on its test outcome. Any later model or hyperparameter study requires a new versioned protocol and must not use these test results for tuning.
-
-## Dashboard and tests
-
-```bash
-streamlit run dashboard/app.py
 python -m pytest -q
-python -m pip check
+python -m streamlit run dashboard/app.py
 ```
 
-The dashboard distinguishes validation from final test, explores continual matrices and replay allocation, compares resources and forgetting, supports schema-validated local CSV inference, and ships a development-vector-only Attack Simulation page. No page loads raw or logical-test data.
+On Windows PowerShell, activate with `.venv\Scripts\Activate.ps1`. `requirements-repro.txt` pins the complete environment used for the finalized run; use `python -m pip install -r requirements-repro.txt -e '.[dev,dashboard]'` when exact package-version reproduction is required.
 
-See [dashboard documentation](docs/dashboard.md).
+## Dashboard
 
-## Results and documentation
+The Streamlit dashboard uses tracked files only and provides seven views:
 
-- [Validation benchmark](docs/benchmark_results.md)
-- [Final evaluation](docs/final_evaluation.md)
-- [TAFR method](docs/tafr_method.md)
-- [Naive baseline](docs/naive_baseline.md)
-- [Architecture](docs/architecture.md)
-- `results/validation_benchmark_seed42.csv`
-- `results/final_test_seed42.csv`
-- `results/dashboard_data.json`
+- **Overview:** selected method and validation/final-test comparisons.
+- **Continual Learning:** performance matrices, forgetting, forward transfer, recalls, and confusion matrices.
+- **TAFR Replay Intelligence:** replay quotas and the forgetting, uncertainty, and rarity signals.
+- **Method Comparison:** accuracy, Macro-F1, resource, and forgetting trade-offs.
+- **Inference Demo:** schema-validated, in-memory prediction for an uploaded feature-only CSV.
+- **Attack Simulation:** inference on deterministic development-only vectors with display-only response guidance.
+- **Methodology and Limitations:** the scientific boundary and known caveats.
 
-## Limitations
+Uploaded inference data is limited to 5 MB and 500 rows, must follow the exact 42-feature schema, and is never persisted. See [dashboard usage](docs/dashboard.md).
 
-This is a single-seed result. The required row-stratified validation preserves duplicate and conflicting-label feature rows, so identical features can cross development and validation and make validation optimistic. Replay forgetting is a retained-memory proxy rather than an oracle over discarded rows. The official test split is consumed and finalized for protocol v1.0. Dataset split roles are structurally verified, but equality with official UNSW-hosted bytes is not established.
+## Inference assets and verification
+
+The tracked [models](models/README.md) directory contains:
+
+- five weights-only `model.safetensors` files;
+- the frozen E1 `preprocessor.skops`;
+- raw and transformed feature ordering;
+- the immutable global class mapping;
+- 80 development-only simulation vectors;
+- per-method architecture, metric-reference, and provenance metadata;
+- a SHA-256 manifest covering all 14 runtime JSON/binary assets.
+
+These assets exist to make a clean clone usable without the original training machine. They contain no optimizer state, replay buffer, RNG state, training history, raw dataset, or logical-test rows.
+
+```bash
+python scripts/verify_inference_assets.py
+```
+
+The verifier checks every declared checksum, safely loads the frozen preprocessor, validates its 156-feature output contract and 44,210-row fit scope, loads all five models, checks the 75,146-parameter architecture and seed, and confirms finite ten-class probabilities that sum to one for all 80 bundled scenarios. See [inference asset provenance](docs/inference_assets.md).
+
+## Reproducibility and dataset
+
+The study uses seed 42, a fixed manifest-verified split, a seed-42 stratified 80/20 development/validation split of logical training, fixed E1–E4 experiences, and validation-only model selection. The selected method was frozen before the logical test was loaded. The official-test evaluation is consumed and finalized for protocol v1.0; it must not be used for later tuning or repeated in response to its result.
+
+UNSW-NB15 is not committed. The verified local mirror has swapped physical filenames: logical training is the 175,341-row `UNSW_NB15_testing-set.csv`, and logical testing is the 82,332-row `UNSW_NB15_training-set.csv`. The project does not distribute a separate cleaned dataset. Preparation derives ignored local arrays from verified logical training only; the tracked simulation vectors are a small inference demonstration, not a dataset substitute.
+
+Clean-clone dashboard/inference reproduction and dataset-dependent validation reproduction are documented separately in [reproducibility](docs/reproducibility.md). Dataset preparation details are in [data preparation](docs/data_preparation.md).
+
+## Results policy
+
+Frozen public results live under `results/`; detailed training checkpoints and generated research artifacts remain ignored under `artifacts/`. Without retraining, a clean clone can inspect every tracked result, render dashboard charts, verify all assets, run all five models, upload compatible feature CSVs, and run the offline simulator. Reproducing training or validation requires the hash-pinned dataset mirror and creates only local ignored artifacts.
+
+Do not rerun the finalized protocol-v1.0 benchmark based on its known test outcome. Any new model, task order, feature choice, or hyperparameter study requires a newly versioned protocol that preserves test isolation.
+
+## Limitations and safety scope
+
+- The reported evidence uses a single seed: 42.
+- The experience order is simulated rather than a true chronological threat stream.
+- The required row-stratified split preserves duplicates and conflicting-label feature rows; identical feature vectors may cross development/validation boundaries and make validation optimistic.
+- Logical split roles are structurally and hash verified, but byte identity with an official UNSW-hosted copy is not established.
+- The forgetting signal uses retained training-memory recall as a proxy; discarded historical rows are not available to it.
+- TAFR-IDS is an offline research prototype, not production network defense.
+
+Attack Simulation is strictly offline. It sends no packets, scans no hosts, contacts no targets, changes no network or firewall configuration, and performs no enforcement. Its predictions and response text are advisory and displayed only in the current dashboard session.
+
+## Documentation, acknowledgements, and references
+
+- [UNSW-NB15 official project and dataset description](https://research.unsw.edu.au/projects/unsw-nb15-dataset)
+- [PyTorch documentation](https://docs.pytorch.org/docs/stable/)
+- [scikit-learn documentation](https://scikit-learn.org/stable/)
+- [skops secure model persistence](https://skops.readthedocs.io/en/stable/persistence.html)
+- [safetensors documentation](https://huggingface.co/docs/safetensors/index)
+- [Streamlit documentation](https://docs.streamlit.io/)
+- Project-specific continual-learning definitions: [experimental protocol](docs/experimental_protocol.md), [naive baseline](docs/naive_baseline.md), and [TAFR replay method](docs/tafr_method.md)
+
+The source code is available under the [MIT License](LICENSE). The dataset is not covered by the repository's software license; consult the UNSW-NB15 source for its terms and citation guidance.

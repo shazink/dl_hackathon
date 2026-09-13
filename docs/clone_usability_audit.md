@@ -1,5 +1,11 @@
 # Fresh-clone usability audit
 
+> Historical audit note: this document records the missing-file failures found
+> before the tracked inference release was added. Commit `74281fa` subsequently
+> supplied the runtime assets. Current clean-clone instructions and verification
+> are maintained in [Reproducibility](reproducibility.md) and
+> [Inference assets](inference_assets.md).
+
 This audit records the repository state at commit `f59b6ff` before portable inference assets were added. It was performed without training, preprocessing fits, or logical-test access.
 
 ## What a clean checkout can do

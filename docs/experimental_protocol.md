@@ -1,5 +1,7 @@
 # Experimental protocol
 
+**Status:** protocol v1.0 is frozen, its validation selection is complete, and its one-time logical-test evaluation is consumed/finalized. This document is the scientific contract for the reported seed-42 study.
+
 ## Fixed decisions
 
 - Dataset: UNSW-NB15, using the official training and test split.
@@ -13,6 +15,36 @@
 - The final pipeline must support a reproducible one-command run.
 - The final report is limited to four pages.
 - Never fabricate, hide, or silently replace experimental results.
+
+## Continual experiences
+
+| Experience | Newly introduced attacks | Normal traffic |
+| --- | --- | --- |
+| E1 | Generic, Shellcode, Worms | Disjoint E1 Normal subset |
+| E2 | Exploits, Backdoor | Disjoint E2 Normal subset |
+| E3 | Fuzzers, Analysis | Disjoint E3 Normal subset |
+| E4 | DoS, Reconnaissance | Disjoint E4 Normal subset |
+
+This is a fixed class-incremental sequence derived from development attack counts, not a chronological ordering of UNSW-NB15 traffic. Every attack class is introduced once; Normal recurs with different row IDs.
+
+## Shared model and training contract
+
+Every method uses the same `156 → 256 → 128 → 10` MLP. Each hidden linear layer is followed by LayerNorm, ReLU, and dropout 0.20. Hidden layers use Kaiming initialization; the output layer uses Xavier initialization. Training uses unweighted cross-entropy and AdamW with learning rate 0.001, weight decay 0.0001, batch size 256, gradient clipping at norm 5.0, and 20 epochs per experience. The optimizer resets between experiences while model weights continue. There is no scheduler, early stopping, or validation-selected checkpoint; the final epoch is retained.
+
+All five methods share this architecture, initialization policy, optimizer, training budget, evaluation schedule, preprocessing state, split, and task order. The allowed method difference is replay behavior and its fixed class-priority ablation.
+
+## Frozen before final evaluation
+
+Before logical-test loading, the following were fixed and fingerprinted:
+
+- seed, logical split mapping, development/validation assignment, and E1–E4 task order;
+- target/class mapping, feature schema, and E1-development-only preprocessing;
+- MLP architecture, optimizer, loss, epoch/batch budget, and final-epoch policy;
+- replay capacity/fraction, candidate boundary, signals, normalization, quota bounds, and deterministic selection;
+- validation schedule, metric definitions, and method-selection tie-breaks;
+- source/configuration/data fingerprints and the selected Full TAFR method.
+
+Only after the automated audit and frozen selection did the final evaluation load and transform logical test once and evaluate each finalized checkpoint once. No result triggered retraining, refitting, thresholding, reselection, or rerun.
 
 ## Prohibited leakage paths
 

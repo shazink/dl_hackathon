@@ -9,7 +9,12 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/
+.hypothesis/
+.nox/
+.tox/
+.ipynb_checkpoints/
 .coverage
+.coverage.*
 htmlcov/
 
 # Packaging
@@ -21,6 +26,7 @@ dist/
 .idea/
 .vscode/
 *.swp
+*.log
 .DS_Store
 
 # Local agent state and prompt/scratch material
@@ -36,6 +42,7 @@ scratch/
 .env
 .env.*
 !.env.example
+.streamlit/secrets.toml
 *.pem
 *.key
 

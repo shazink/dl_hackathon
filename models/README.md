@@ -12,7 +12,7 @@ Each method directory contains only final model tensors in `model.safetensors` a
 - `simulation_scenarios.npz`: 80 already-transformed development vectors, eight per class, for the safe offline dashboard simulation;
 - `SHA256SUMS`: hashes for every runtime JSON/binary asset.
 
-The scenario archive contains no logical-test records and is not raw traffic. It was copied byte-for-byte from the previously verified development-only artifact described in `docs/dashboard.md`. Model metadata links to the tracked validation and final-test summaries; those references document existing results and are not newly computed metrics.
+The scenario archive contains no logical-test records and is not raw traffic. It was copied byte-for-byte from the previously verified development-only artifact described in the [dashboard guide](../docs/dashboard.md). Model metadata links to the tracked validation and final-test summaries; those references document existing results and are not newly computed metrics.
 
 Verify all files and run a finite-probability smoke test for all five models:
 
@@ -28,3 +28,5 @@ streamlit run dashboard/app.py
 ```
 
 Raw CSV inference expects exactly the columns and order in `shared/feature_schema.json`. Do not edit a bundle without regenerating `shared/SHA256SUMS` and retaining accurate source provenance.
+
+See [inference asset provenance](../docs/inference_assets.md) for the complete export and verification contract.

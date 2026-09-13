@@ -1,5 +1,8 @@
 # Implementation plan
 
+> Historical implementation plan. The repository has completed these phases;
+> current operating instructions live in [Reproducibility](reproducibility.md).
+
 ## 1. Repository initialization
 
 **Acceptance:** requested tree exists; package installs in editable mode; import/version test passes; metadata parses; ignore rules protect secrets, datasets, and generated outputs; context documents agree. Completed.
@@ -20,7 +23,7 @@ Completed: the prescribed development-count snake allocation and disjoint recurr
 
 **Acceptance:** transformations fit only on permitted training data; state can be serialized and reused; validation/test application cannot refit; leakage and determinism tests pass.
 
-Completed for development/validation preparation: fit once on E1 development and freeze. Logical-test transformation remains deferred to evaluation. See `docs/data_preparation.md`.
+Completed for development/validation preparation: fit once on E1 development and freeze. At this phase, logical-test transformation remained deferred until the later one-time final evaluation; that evaluation is now consumed and finalized. See `docs/data_preparation.md`.
 
 ## 5. Naive sequential fine-tuning baseline
 
